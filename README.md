@@ -11,6 +11,10 @@ Dieses Repo richtet die Basis-Infrastruktur auf dem Raspberry Pi ein und startet
 - Docker-Netzwerke für Frontend und Backend
 - automatische Erstellung der `data/`-Ordner
 - `monitoring.conf` bereits im Repo enthalten
+- Preflight-Checks und `.env`-Validierung
+- Setup-Logging und optionaler Debug-Modus
+- Backup- und Restore-Skripte
+- Dokumentation für Architektur, Ports und Troubleshooting
 
 ## Ablauf
 
@@ -49,21 +53,29 @@ Danach bitte mindestens `SERVER_USER` und `POSTGRES_PASSWORD` prüfen.
 ./setup.sh
 ```
 
-Das Script erledigt:
-
-1. `.env` erzeugen und laden
-2. Host bootstrapen
-3. `data/nginx`, `data/postgres` und `data/uptime-kuma` erstellen
-4. Konfiguration prüfen
-5. Container starten
-6. Status anzeigen
-
-## Aufruf danach
+Mit Debug-Ausgabe:
 
 ```bash
-./scripts/status.sh
-./scripts/stop.sh
-./scripts/start.sh
+DEBUG=true ./setup.sh
+```
+
+## Wichtige Kurzbefehle
+
+```bash
+make preflight
+make validate
+make up
+make down
+make status
+make logs
+```
+
+## Backups
+
+```bash
+./scripts/backup-postgres.sh
+./scripts/backup-data.sh
+./scripts/restore-postgres.sh /pfad/zur/datei.sql
 ```
 
 ## Monitoring
@@ -73,3 +85,10 @@ Nach erfolgreichem Start erreichbar unter:
 ```text
 http://<PI-IP>/monitoring/
 ```
+
+## Dokumentation
+
+- `docs/architecture.md`
+- `docs/ports-and-networks.md`
+- `docs/troubleshooting.md`
+- `docs/restore-guide.md`

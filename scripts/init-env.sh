@@ -10,4 +10,4 @@ fi
 
 cp .env.example .env
 echo ".env wurde aus .env.example erstellt."
-echo "Bitte POSTGRES_PASSWORD in .env anpassen."
+echo "Bitte SERVER_USER und POSTGRES_PASSWORD in .env anpassen."

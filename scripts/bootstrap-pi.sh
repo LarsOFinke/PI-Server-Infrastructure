@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-smokenougat}}}"
+if [[ "${DEBUG:-false}" == "true" ]]; then
+  set -x
+fi
+
+USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-serveradmin}}}"
 USER_HOME="$(getent passwd "$USERNAME" | cut -d: -f6 || true)"
 INSTALL_TMPFS="true"
 DISABLE_ROOT_SSH="true"

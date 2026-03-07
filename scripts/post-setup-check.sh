@@ -8,10 +8,6 @@ section() {
   echo "==> $1"
 }
 
-warn() {
-  echo "WARNUNG: $1"
-}
-
 section "Grundlegende Dateien prüfen"
 [[ -f "$ROOT_DIR/compose.yml" ]] || { echo "compose.yml fehlt."; exit 1; }
 [[ -f "$ROOT_DIR/.env.example" ]] || { echo ".env.example fehlt."; exit 1; }

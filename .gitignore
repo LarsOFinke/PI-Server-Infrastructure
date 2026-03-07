@@ -1,6 +1,6 @@
 .env
-/logs/
-/data/postgres/
-/data/nginx/
-/data/uptime-kuma/
+/logs/*
+!/logs/.gitkeep
+/data/*
+!/data/.gitkeep
 *.log

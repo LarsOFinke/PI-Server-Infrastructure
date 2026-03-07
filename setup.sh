@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+if [[ "${DEBUG:-false}" == "true" ]]; then
+  set -x
+fi
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG_DIR="$ROOT_DIR/logs"
 LOG_FILE="$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log"
@@ -28,6 +32,7 @@ cd "$ROOT_DIR"
 log "Server-Setup wird gestartet"
 echo "Repo: $ROOT_DIR"
 echo "Log:  $LOG_FILE"
+echo "Debug: ${DEBUG:-false}"
 
 log ".env vorbereiten"
 bash "$ROOT_DIR/scripts/init-env.sh"
@@ -36,8 +41,14 @@ log ".env laden"
 set -a
 source "$ROOT_DIR/.env"
 set +a
-USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-smokenougat}}}"
+USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-serveradmin}}}"
 echo "Server-Benutzer: $USERNAME"
+
+log "Preflight-Checks ausführen"
+bash "$ROOT_DIR/scripts/preflight-check.sh"
+
+log ".env validieren"
+bash "$ROOT_DIR/scripts/validate-env.sh"
 
 log "Host-Bootstrap ausführen"
 sudo SERVER_USER="$USERNAME" bash "$ROOT_DIR/scripts/bootstrap-pi.sh"
@@ -53,7 +64,7 @@ if id "$USERNAME" >/dev/null 2>&1; then
 fi
 
 log "Compose-Konfiguration validieren"
-docker compose --env-file "$ROOT_DIR/.env" config >/dev/null
+bash "$ROOT_DIR/scripts/validate.sh"
 
 actionable_group_hint="Falls 'permission denied' erscheint: bitte einmal neu anmelden oder rebooten und setup.sh erneut starten."
 
@@ -69,3 +80,4 @@ bash "$ROOT_DIR/scripts/status.sh"
 log "Setup abgeschlossen"
 echo "Monitoring: http://<PI-IP>/monitoring/"
 echo "Hinweis: ${actionable_group_hint}"
+echo "Troubleshooting: docs/troubleshooting.md"

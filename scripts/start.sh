@@ -9,9 +9,9 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
-mkdir -p data/nginx data/postgres data/uptime-kuma
+mkdir -p data/nginx data/postgres data/uptime-kuma logs
 
-docker compose up -d
+docker compose --env-file "$ROOT_DIR/.env" up -d --remove-orphans
 
 echo
 echo "Infrastruktur wurde gestartet."
