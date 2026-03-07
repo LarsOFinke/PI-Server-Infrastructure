@@ -1,0 +1,6 @@
+.env
+/logs/
+/data/postgres/
+/data/nginx/
+/data/uptime-kuma/
+*.log
