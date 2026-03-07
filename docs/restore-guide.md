@@ -7,7 +7,7 @@
 3. Restore ausführen:
 
 ```bash
-./scripts/restore-postgres.sh /srv/backups/postgres/<datei>.sql
+./scripts/backup/restore-postgres.sh /srv/backups/postgres/<datei>.sql
 ```
 
 ## Datenarchiv entpacken
@@ -19,5 +19,5 @@ tar -xzf /srv/backups/data/<archiv>.tar.gz
 Vor einem Restore der `data/`-Ordner sollte der Stack gestoppt werden:
 
 ```bash
-./scripts/stop.sh
+./scripts/services/stop.sh
 ```

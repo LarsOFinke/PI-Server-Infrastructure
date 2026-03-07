@@ -9,7 +9,7 @@ require_file /etc/os-release
 . /etc/os-release
 case "${ID:-}" in debian|raspbian) echo "Unterstütztes System erkannt: ${PRETTY_NAME:-unknown}" ;; *) echo "Nicht getestetes System: ${PRETTY_NAME:-unknown}"; echo "Empfohlen: Debian oder Raspberry Pi OS" ;; esac
 section "Repo-Dateien prüfen"
-for f in "$ROOT_DIR/compose.yml" "$ROOT_DIR/.env.example" "$ROOT_DIR/nginx/nginx.conf" "$ROOT_DIR/nginx/conf.d/monitoring.conf" "$ROOT_DIR/scripts/legacy/bootstrap-pi.sh" "$ROOT_DIR/scripts/setup/validate-env.sh"; do require_file "$f"; done
+for f in "$ROOT_DIR/compose.yml" "$ROOT_DIR/.env.example" "$ROOT_DIR/nginx/nginx.conf" "$ROOT_DIR/nginx/conf.d/monitoring.conf" "$ROOT_DIR/scripts/host/bootstrap.sh" "$ROOT_DIR/scripts/setup/validate-env.sh"; do require_file "$f"; done
 section "Pflichtbefehle prüfen"
 for c in bash sudo tee ss; do require_command "$c"; done
 section "Ports prüfen"

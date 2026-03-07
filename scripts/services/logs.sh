@@ -4,4 +4,9 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/common/all.sh"
 cd "$ROOT_DIR"
 ensure_env_file
-if [[ "$#" -gt 0 ]]; then compose_cmd logs --tail=200 "$@"; else compose_cmd logs --tail=200; fi
+validate_service_names "$@"
+if [[ "$#" -gt 0 ]]; then
+  compose_cmd logs --tail=200 "$@"
+else
+  compose_cmd logs --tail=200
+fi

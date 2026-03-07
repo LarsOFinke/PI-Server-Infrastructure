@@ -2,11 +2,9 @@
 set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 source "$ROOT_DIR/scripts/common/all.sh"
-cd "$ROOT_DIR"
-ensure_env_file
-validate_service_names "$@"
-if [[ "$#" -gt 0 ]]; then
-  compose_cmd stop "$@"
-else
-  compose_cmd down
-fi
+load_runtime_env
+ensure_backup_dirs
+
+echo "Backup-Verzeichnisse sind vorbereitet:"
+echo "- /srv/backups/postgres"
+echo "- /srv/backups/data"

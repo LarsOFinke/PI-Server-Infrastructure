@@ -1,15 +1,18 @@
 # PI Server Infrastructure
 
-Dieses Repo richtet die Basis-Infrastruktur auf einem Raspberry Pi oder Debian-Host ein. Nach Refactoring v1 ist das Repo in klar getrennte Bereiche aufgeteilt:
+Dieses Repo richtet die Basis-Infrastruktur auf einem Raspberry Pi oder Debian-Host ein und hält das Setup bewusst modular.
 
-- `setup.sh` orchestriert nur noch den Ablauf
-- `scripts/common/` enthält wiederverwendbare Hilfsfunktionen
-- `scripts/setup/` enthält Setup-Schritte
-- `scripts/services/` enthält tägliche Docker-Operationen
-- `scripts/backup/` enthält Backup- und Restore-Skripte
-- `scripts/legacy/` enthält historisch gewachsene Host-Skripte
+## Zielbild
 
-## Architektur des Repos
+Die Infrastruktur besteht aus:
+
+- `nginx` als Reverse Proxy
+- `postgres` als interne Datenbank
+- `uptime-kuma` als Monitoring
+- Host-Bootstrap für Docker, Firewall, SSH-Härtung und Standardverzeichnisse
+- Backup- und Restore-Skripten
+
+## Repo-Struktur
 
 ```text
 PI-Server-Infrastructure/
@@ -24,21 +27,32 @@ PI-Server-Infrastructure/
 ├── logs/
 └── scripts/
     ├── common/
+    ├── host/
     ├── setup/
     ├── services/
-    ├── backup/
-    └── legacy/
+    └── backup/
 ```
 
-## Enthaltene Infrastruktur
+## Feature-basierter Setup-Ablauf
 
-- Nginx als Reverse Proxy
-- Postgres als interne Datenbank
-- Uptime Kuma als Monitoring
-- Docker-Netzwerke für Frontend und Backend
-- lokaler Postgres-Port auf `127.0.0.1:15432`
-- Setup-Logging, Dev-Modus und selektive Schrittsteuerung
-- Backup- und Restore-Skripte
+`setup.sh` fragt standardmäßig am Anfang ab, welche Features eingerichtet werden sollen.
+
+Verfügbare Features:
+
+- `host` – Host vorbereiten
+- `nginx` – Nginx-Container bereitstellen
+- `postgres` – Postgres-Container bereitstellen
+- `monitoring` – Uptime Kuma bereitstellen
+- `backup` – Backup-Verzeichnisse vorbereiten
+- `checks` – Validierungen und Post-Setup-Checks ausführen
+
+Standardmäßig sind in der interaktiven Auswahl aktiv:
+
+- `host`
+- `nginx`
+- `postgres`
+- `monitoring`
+- `checks`
 
 ## Einmaliger Ablauf auf einem frischen Pi
 
@@ -65,61 +79,49 @@ ssh -T git@github.com
 ```bash
 git clone <DEIN-REPO-URL> ~/repositories/server
 cd ~/repositories/server
-chmod +x setup.sh scripts/*.sh scripts/*/*.sh
+chmod +x setup.sh
+find scripts -type f -name "*.sh" -exec chmod +x {} +
 ```
 
-### 4. `.env` anpassen
-
-Beim ersten Lauf wird `.env` automatisch aus `.env.example` erstellt.
-Pflichtschlüssel stehen in `config/env/required.env.keys`.
-
-### 5. Komplettes Setup starten
+### 4. Setup starten
 
 ```bash
 ./setup.sh
 ```
 
-Mit Debug-Ausgabe:
+Beim ersten Lauf wird `.env` automatisch aus `.env.example` erstellt.
+Pflichtvariablen stehen in `config/env/required.env.keys`.
+
+## Nicht-interaktive Nutzung
+
+Bestimmte Features direkt auswählen:
 
 ```bash
-DEBUG=true ./setup.sh
+./setup.sh --features host,nginx,postgres,monitoring,checks
+./setup.sh --features monitoring
+./setup.sh --features nginx,monitoring --no-start
 ```
 
-Mit interaktiver Bestätigung pro Schritt:
+Profile verwenden:
 
 ```bash
-./setup.sh --dev
+./setup.sh --profile core
+./setup.sh --profile full
+./setup.sh --profile monitoring-only
+./setup.sh --profile services --non-interactive
 ```
 
-## Setup gezielt steuern
+Verfügbare Profile:
 
-Nur bestimmte Schritte ausführen:
+- `core` / `minimal`
+- `full`
+- `host-only`
+- `services`
+- `monitoring-only`
 
-```bash
-./setup.sh --only validate,start,status
-```
+## Container und Services im Alltag
 
-Bestimmte Schritte überspringen:
-
-```bash
-./setup.sh --skip bootstrap,preflight
-```
-
-Container beim Setup nicht starten:
-
-```bash
-./setup.sh --no-start
-```
-
-Nur ausgewählte Services neu starten:
-
-```bash
-./setup.sh --only start,status --services uptime-kuma
-./setup.sh --only start,status --services nginx
-./setup.sh --only start,status --services nginx,uptime-kuma
-```
-
-## Service-Skripte für den Alltag
+Services gezielt starten oder aktualisieren:
 
 ```bash
 ./scripts/services/start.sh uptime-kuma
@@ -130,13 +132,9 @@ Nur ausgewählte Services neu starten:
 ./scripts/services/restart.sh nginx uptime-kuma
 ```
 
-Für Rückwärtskompatibilität funktionieren auch die Wrapper unter `scripts/` weiter.
-
 ## Zugriff auf Services
 
 ### Monitoring
-
-Empfohlen per vHost:
 
 ```text
 http://monitoring.server
@@ -152,7 +150,7 @@ Beispiel:
 
 ### Postgres vom PC aus per SSH-Tunnel
 
-Der Postgres-Port ist nur lokal auf dem Pi veröffentlicht:
+Postgres ist nur lokal auf dem Pi veröffentlicht:
 
 ```text
 127.0.0.1:15432
@@ -170,10 +168,12 @@ Danach in DBeaver oder pgAdmin:
 - Port: `5432`
 - User / Passwort / DB aus `.env`
 
-## Wichtige Kurzbefehle
+## Makefile-Kurzbefehle
 
 ```bash
 make setup
+make setup-core
+make setup-monitoring
 make preflight
 make validate
 make up
@@ -181,7 +181,6 @@ make down
 make status
 make logs
 make restart-kuma
-make restart-nginx
 make restart-monitoring
 ```
 
@@ -200,19 +199,5 @@ make restart-monitoring
 - `docs/troubleshooting.md`
 - `docs/restore-guide.md`
 - `docs/refactoring/v1-plan.md`
-
-
-## Refactoring v2
-
-Das Host-Bootstrap wurde weiter zerlegt. Die eigentliche Host-Einrichtung liegt jetzt unter `scripts/host/`, während `scripts/setup/bootstrap-host.sh` nur noch die Ausführung orchestriert.
-
-Wichtige Dateien:
-
-- `scripts/host/bootstrap.sh`
-- `scripts/host/common.sh`
-- `scripts/host/config.sh`
-- `scripts/host/lib/system.sh`
-- `scripts/host/lib/filesystem.sh`
-- `scripts/host/lib/security.sh`
-- `scripts/host/lib/docker.sh`
-- `scripts/host/lib/summary.sh`
+- `docs/refactoring/v2-plan.md`
+- `docs/refactoring/v3-plan.md`

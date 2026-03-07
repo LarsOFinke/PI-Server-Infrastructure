@@ -18,4 +18,3 @@ Das Repo soll nach dem ersten lauffähigen Stand in kleinere, klar getrennte She
 - Setup-Schritte liegen in `scripts/setup/`
 - tägliche Docker-Arbeit liegt in `scripts/services/`
 - Backup/Restore liegt in `scripts/backup/`
-- historisches Host-Bootstrap-Skript liegt in `scripts/legacy/`

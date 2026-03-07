@@ -29,6 +29,12 @@ docker compose exec nginx nginx -T
 ## Nur einzelne Services neu starten
 
 ```bash
-./setup.sh --only start,status --services uptime-kuma
+./scripts/services/restart.sh uptime-kuma
 ./scripts/services/restart.sh nginx uptime-kuma
+```
+
+## Nur Monitoring neu einrichten
+
+```bash
+./setup.sh --features monitoring,checks --non-interactive
 ```

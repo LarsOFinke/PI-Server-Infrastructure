@@ -14,8 +14,8 @@ setup_error_trap() {
 }
 
 on_error() {
-  local line_no="${1:-unknown}"
   local exit_code="$?"
+  local line_no="${1:-unknown}"
   error "Fehler in ${0##*/} in Zeile ${line_no} (Exit-Code: ${exit_code})."
   if [[ -n "${LOG_FILE:-}" ]]; then
     echo "Log: ${LOG_FILE}" >&2

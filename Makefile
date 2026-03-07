@@ -1,42 +1,48 @@
 SHELL := /usr/bin/env bash
 
-.PHONY: setup preflight validate up down status logs restart-kuma restart-nginx restart-monitoring backup-postgres backup-data restore-postgres
+.PHONY: setup setup-core setup-monitoring preflight validate up down status logs restart-kuma restart-nginx restart-monitoring backup-postgres backup-data restore-postgres
 
 setup:
 	./setup.sh
 
+setup-core:
+	./setup.sh --profile core --non-interactive
+
+setup-monitoring:
+	./setup.sh --features monitoring,checks --non-interactive
+
 preflight:
-	./scripts/preflight-check.sh
+	./scripts/setup/preflight.sh
 
 validate:
-	./scripts/validate.sh
+	./scripts/setup/validate-compose.sh
 
 up:
-	./scripts/start.sh
+	./scripts/services/start.sh
 
 down:
-	./scripts/stop.sh
+	./scripts/services/stop.sh
 
 status:
-	./scripts/status.sh
+	./scripts/services/status.sh
 
 logs:
-	./scripts/logs.sh
+	./scripts/services/logs.sh
 
 restart-kuma:
-	./scripts/start.sh uptime-kuma
+	./scripts/services/restart.sh uptime-kuma
 
 restart-nginx:
-	./scripts/start.sh nginx
+	./scripts/services/restart.sh nginx
 
 restart-monitoring:
-	./scripts/start.sh nginx uptime-kuma
+	./scripts/services/restart.sh nginx uptime-kuma
 
 backup-postgres:
-	./scripts/backup-postgres.sh
+	./scripts/backup/backup-postgres.sh
 
 backup-data:
-	./scripts/backup-data.sh
+	./scripts/backup/backup-data.sh
 
 restore-postgres:
-	./scripts/restore-postgres.sh
+	./scripts/backup/restore-postgres.sh

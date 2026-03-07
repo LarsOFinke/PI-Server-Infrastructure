@@ -1,98 +1,64 @@
 #!/usr/bin/env bash
 
-AVAILABLE_STEPS=(
-  "init-env"
-  "load-env"
-  "preflight"
-  "validate-env"
-  "bootstrap"
-  "data"
-  "validate"
-  "post-check"
-  "start"
-  "status"
-)
-
 usage() {
   cat <<'EOF_USAGE'
 Verwendung:
   ./setup.sh [OPTIONEN]
 
 Optionen:
-  --dev, -dev
-      Interaktiver Modus. Vor jedem Schritt ausführen, skippen oder abbrechen.
+  --features feature1,feature2
+      Richtet nur die angegebenen Features ein.
 
-  --only step1,step2
-      Führt nur die angegebenen Schritte aus.
+  --profile NAME
+      Verwendet ein vordefiniertes Feature-Profil.
+      Verfügbar: core, minimal, full, host-only, services, monitoring-only
 
-  --skip step1,step2
-      Überspringt die angegebenen Schritte.
-
-  --services svc1,svc2
-      Startet oder zeigt nur diese Docker-Services an.
+  --non-interactive
+      Keine Feature-Abfrage. Ohne --features/--profile wird automatisch das Profil 'core' verwendet.
 
   --no-start
-      Führt Setup aus, startet aber keine Container.
+      Bereitet alles vor, startet aber keine Container.
 
   --help, -h
       Zeigt diese Hilfe.
 
-Verfügbare Schritte:
-  init-env, load-env, preflight, validate-env, bootstrap,
-  data, validate, post-check, start, status
+Features:
+  host, nginx, postgres, monitoring, backup, checks
 
 Beispiele:
   ./setup.sh
-  ./setup.sh --dev
-  ./setup.sh --only validate,start,status
-  ./setup.sh --skip bootstrap,preflight
-  ./setup.sh --services uptime-kuma
-  ./setup.sh --only start,status --services nginx,uptime-kuma
-  ./setup.sh --no-start
+  ./setup.sh --features host,nginx,monitoring
+  ./setup.sh --profile full
+  ./setup.sh --features monitoring --no-start
+  ./setup.sh --profile services --non-interactive
 EOF_USAGE
 }
 
-validate_step_names() {
-  local step
-  for step in "$@"; do
-    [[ -z "$step" ]] && continue
-    if ! contains_element "$step" "${AVAILABLE_STEPS[@]}"; then
-      fail "Unbekannter Schritt: '$step'"
-    fi
-  done
-}
-
 parse_args() {
-  DEV_MODE=false
+  NON_INTERACTIVE=false
   NO_START=false
-  ONLY_STEPS=()
-  SKIP_STEPS=()
-  TARGET_SERVICES=()
+  FEATURE_PROFILE=""
+  SELECTED_FEATURES=()
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --dev|-dev)
-        DEV_MODE=true
+      --features)
+        [[ $# -ge 2 ]] || fail "--features benötigt einen Wert"
+        parse_csv_to_array "$2" SELECTED_FEATURES
+        shift 2
+        ;;
+      --profile)
+        [[ $# -ge 2 ]] || fail "--profile benötigt einen Wert"
+        FEATURE_PROFILE="$2"
+        shift 2
+        ;;
+      --non-interactive)
+        NON_INTERACTIVE=true
         shift
         ;;
       --no-start)
         NO_START=true
         shift
-        ;;
-      --only)
-        [[ $# -ge 2 ]] || fail "--only benötigt einen Wert"
-        parse_csv_to_array "$2" ONLY_STEPS
-        shift 2
-        ;;
-      --skip)
-        [[ $# -ge 2 ]] || fail "--skip benötigt einen Wert"
-        parse_csv_to_array "$2" SKIP_STEPS
-        shift 2
-        ;;
-      --services)
-        [[ $# -ge 2 ]] || fail "--services benötigt einen Wert"
-        parse_csv_to_array "$2" TARGET_SERVICES
-        shift 2
         ;;
       --help|-h)
         usage
@@ -104,8 +70,10 @@ parse_args() {
     esac
   done
 
-  validate_step_names "${ONLY_STEPS[@]}"
-  validate_step_names "${SKIP_STEPS[@]}"
+  if [[ -n "$FEATURE_PROFILE" && "${#SELECTED_FEATURES[@]}" -gt 0 ]]; then
+    fail "Bitte entweder --features oder --profile verwenden, nicht beides zusammen."
+  fi
 
-  export DEV_MODE NO_START
+  validate_feature_names "${SELECTED_FEATURES[@]}"
+  export NON_INTERACTIVE NO_START FEATURE_PROFILE
 }

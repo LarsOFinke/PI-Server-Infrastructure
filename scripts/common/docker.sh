@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 compose_cmd() {
+  command -v docker >/dev/null 2>&1 || fail "Docker ist nicht installiert oder nicht im PATH. Bitte zuerst das Feature 'host' ausführen oder Docker manuell installieren."
   docker compose --env-file "$ROOT_DIR/.env" "$@"
 }
 
