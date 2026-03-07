@@ -27,6 +27,42 @@ trap 'on_error $LINENO' ERR
 
 exec > >(tee -a "$LOG_FILE") 2>&1
 
+run_step() {
+  local label="$1"
+  shift
+
+  log "$label"
+  "$@"
+}
+
+run_step_requires_docker_session() {
+  local label="$1"
+  shift
+
+  log "$label"
+
+  if ! docker info >/dev/null 2>&1; then
+    echo
+    echo "FEHLER: Docker ist in der aktuellen Session noch nicht ohne sudo nutzbar."
+    echo "Wahrscheinliche Ursache:"
+    echo "  Der Benutzer '${USERNAME}' wurde in diesem Lauf neu zur docker-Gruppe hinzugefügt,"
+    echo "  aber die aktuelle Session hat diese Gruppenänderung noch nicht übernommen."
+    echo
+    echo "Bitte einmal neu anmelden oder den Pi neu starten."
+    echo "Danach erneut ausführen:"
+    echo "  ./setup.sh"
+    echo
+    echo "Alternativ für einen Soforttest:"
+    echo "  newgrp docker"
+    echo "  ./setup.sh"
+    echo
+    echo "Log: ${LOG_FILE}"
+    exit 1
+  fi
+
+  "$@"
+}
+
 cd "$ROOT_DIR"
 
 log "Server-Setup wird gestartet"
@@ -34,50 +70,55 @@ echo "Repo: $ROOT_DIR"
 echo "Log:  $LOG_FILE"
 echo "Debug: ${DEBUG:-false}"
 
-log ".env vorbereiten"
-bash "$ROOT_DIR/scripts/init-env.sh"
+run_step ".env vorbereiten" \
+  bash "$ROOT_DIR/scripts/init-env.sh"
 
-log ".env laden"
+run_step ".env laden" \
+  bash -c "
+    set -a
+    source '$ROOT_DIR/.env'
+    set +a
+    echo 'Server-Benutzer: ${SERVER_USER:-${SUDO_USER:-${USER:-serveradmin}}}'
+  "
+
 set -a
 source "$ROOT_DIR/.env"
 set +a
 USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-serveradmin}}}"
-echo "Server-Benutzer: $USERNAME"
 
-log "Preflight-Checks ausführen"
-bash "$ROOT_DIR/scripts/preflight-check.sh"
+run_step "Preflight-Checks ausführen" \
+  bash "$ROOT_DIR/scripts/preflight-check.sh"
 
-log ".env validieren"
-bash "$ROOT_DIR/scripts/validate-env.sh"
+run_step ".env validieren" \
+  bash "$ROOT_DIR/scripts/validate-env.sh"
 
-log "Host-Bootstrap ausführen"
-sudo SERVER_USER="$USERNAME" bash "$ROOT_DIR/scripts/bootstrap-pi.sh"
+run_step "Host-Bootstrap ausführen" \
+  sudo SERVER_USER="$USERNAME" bash "$ROOT_DIR/scripts/bootstrap-pi.sh"
 
-log "Datenverzeichnisse erstellen"
-mkdir -p \
-  "$ROOT_DIR/data/nginx" \
-  "$ROOT_DIR/data/postgres" \
-  "$ROOT_DIR/data/uptime-kuma"
-chmod -R 750 "$ROOT_DIR/data"
-if id "$USERNAME" >/dev/null 2>&1; then
-  chown -R "$USERNAME:$USERNAME" "$ROOT_DIR/data"
-fi
+run_step "Datenverzeichnisse erstellen" \
+  bash -c "
+    mkdir -p \
+      '$ROOT_DIR/data/nginx' \
+      '$ROOT_DIR/data/postgres' \
+      '$ROOT_DIR/data/uptime-kuma'
+    chmod -R 750 '$ROOT_DIR/data'
+    if id '$USERNAME' >/dev/null 2>&1; then
+      chown -R '$USERNAME:$USERNAME' '$ROOT_DIR/data'
+    fi
+  "
 
-log "Compose-Konfiguration validieren"
-bash "$ROOT_DIR/scripts/validate.sh"
+run_step "Compose-Konfiguration validieren" \
+  bash "$ROOT_DIR/scripts/validate.sh"
 
-actionable_group_hint="Falls 'permission denied' erscheint: bitte einmal neu anmelden oder rebooten und setup.sh erneut starten."
+run_step "Post-Setup-Checks ausführen" \
+  bash "$ROOT_DIR/scripts/post-setup-check.sh"
 
-log "Post-Setup-Checks ausführen"
-bash "$ROOT_DIR/scripts/post-setup-check.sh"
+run_step_requires_docker_session "Infrastruktur starten" \
+  bash "$ROOT_DIR/scripts/start.sh"
 
-log "Infrastruktur starten"
-bash "$ROOT_DIR/scripts/start.sh"
-
-log "Status anzeigen"
-bash "$ROOT_DIR/scripts/status.sh"
+run_step_requires_docker_session "Status anzeigen" \
+  bash "$ROOT_DIR/scripts/status.sh"
 
 log "Setup abgeschlossen"
 echo "Monitoring: http://<PI-IP>/monitoring/"
-echo "Hinweis: ${actionable_group_hint}"
 echo "Troubleshooting: docs/troubleshooting.md"
