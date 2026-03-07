@@ -1,45 +1,60 @@
 # Troubleshooting
 
-## Setup mit Debug-Modus ausführen
+## Setup bricht beim Docker-Start mit "permission denied" ab
+
+Die docker-Gruppenzuweisung ist in der aktuellen Session noch nicht aktiv.
+
+Lösung:
 
 ```bash
-DEBUG=true ./setup.sh
+logout
+# oder neue SSH-Session öffnen
+./setup.sh
 ```
 
-## Aktuellen Status prüfen
+Alternativ:
+
+```bash
+newgrp docker
+./setup.sh
+```
+
+## Nur einen Service neu starten
+
+```bash
+./scripts/start.sh uptime-kuma
+./scripts/start.sh nginx
+./scripts/start.sh nginx uptime-kuma
+```
+
+## Status und Logs prüfen
 
 ```bash
 ./scripts/status.sh
-```
-
-## Container-Logs ansehen
-
-```bash
-./scripts/logs.sh
+./scripts/status.sh uptime-kuma
 ./scripts/logs.sh nginx
-./scripts/logs.sh postgres
+./scripts/logs.sh uptime-kuma
 ```
 
-## Compose-Konfiguration validieren
+## Nginx-Konfiguration testen und neu laden
 
 ```bash
-./scripts/validate.sh
+docker compose exec nginx nginx -t
+docker compose exec nginx nginx -s reload
 ```
 
-## Typische Ursachen
+## Uptime Kuma über vHost statt Unterpfad
 
-### Docker-Rechte greifen noch nicht
+Das Repo ist für `monitoring.local` vorbereitet. Wenn der Name nicht funktioniert, muss dein PC ihn lokal auf die Pi-IP auflösen.
 
-Nach `usermod -aG docker <user>` bitte neu anmelden oder rebooten.
+Beispiel hosts-Datei:
 
-### Port 80 ist belegt
+```text
+192.168.178.50 monitoring.local
+```
+
+## Postgres sicher vom PC aus erreichen
 
 ```bash
-ss -tulpn | grep ':80'
+ssh -L 5432:127.0.0.1:15432 serveradmin@server
 ```
-
-### Monitoring ist nicht erreichbar
-
-- `docker compose ps` prüfen
-- `./scripts/logs.sh nginx` prüfen
-- `./scripts/logs.sh uptime-kuma` prüfen

@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT_DIR"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/common.sh"
 
-if [[ ! -f .env ]]; then
-  echo "Fehler: .env fehlt. Bitte zuerst ./scripts/init-env.sh ausführen."
-  exit 1
+cd "$(repo_root)"
+ensure_env_file
+ensure_data_dirs
+
+if [[ "$#" -gt 0 ]]; then
+  echo "Starte/Aktualisiere Services: $*"
+  compose_cmd up -d --remove-orphans "$@"
+else
+  compose_cmd up -d --remove-orphans
 fi
-
-mkdir -p data/nginx data/postgres data/uptime-kuma logs
-
-docker compose --env-file "$ROOT_DIR/.env" up -d --remove-orphans
 
 echo
 echo "Infrastruktur wurde gestartet."
-echo "Monitoring: http://<PI-IP>/monitoring/"
+echo "Monitoring: http://<PI-IP>/ oder per vHost wie monitoring.local"

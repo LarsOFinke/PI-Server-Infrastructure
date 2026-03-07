@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT_DIR"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/common.sh"
 
-[[ -f .env ]] || { echo "Fehler: .env fehlt."; exit 1; }
+cd "$(repo_root)"
+ensure_env_file
+compose_cmd config >/dev/null
 
-docker compose --env-file "$ROOT_DIR/.env" config >/dev/null
 echo "Compose-Konfiguration ist gültig."

@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+source "$SCRIPT_DIR/common.sh"
+ROOT_DIR="$(repo_root)"
 
 section() {
   echo
@@ -39,10 +42,10 @@ fi
 echo "Docker-Dienst läuft."
 
 section "Compose-Konfiguration validieren"
-docker compose -f "$ROOT_DIR/compose.yml" --env-file "$ROOT_DIR/.env" config >/dev/null
+compose_cmd config >/dev/null
 echo "compose.yml ist gültig."
 
 section "Hinweise"
 echo "Der Host ist vorbereitet."
 echo "Die Monitoring-Konfiguration ist im Repo enthalten."
-echo "Als Nächstes startet setup.sh automatisch die Infrastruktur."
+echo "Mit ./setup.sh --only start,status --services uptime-kuma kannst du nur Kuma neu starten."

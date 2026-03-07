@@ -1,6 +1,9 @@
 # Server Infrastructure Repo
 
-Dieses Repo richtet die Basis-Infrastruktur auf dem Raspberry Pi ein und startet danach direkt die ersten Container.
+Dieses Repo richtet die Basis-Infrastruktur auf dem Raspberry Pi ein und unterstützt zwei Modi:
+
+- **vollständiges Setup** für einen frischen Pi
+- **gezielte Teil-Läufe** für die Entwicklung, z. B. nur `nginx` oder nur `uptime-kuma`
 
 ## Enthalten
 
@@ -10,13 +13,12 @@ Dieses Repo richtet die Basis-Infrastruktur auf dem Raspberry Pi ein und startet
 - Uptime Kuma als Monitoring
 - Docker-Netzwerke für Frontend und Backend
 - automatische Erstellung der `data/`-Ordner
-- `monitoring.conf` bereits im Repo enthalten
 - Preflight-Checks und `.env`-Validierung
 - Setup-Logging und optionaler Debug-Modus
 - Backup- und Restore-Skripte
 - Dokumentation für Architektur, Ports und Troubleshooting
 
-## Ablauf
+## Einmaliger Ablauf auf einem frischen Pi
 
 ### 1. Pi vorbereiten
 
@@ -28,11 +30,13 @@ Dieses Repo richtet die Basis-Infrastruktur auf dem Raspberry Pi ein und startet
 
 ```bash
 sudo apt update
+sudo apt upgrade -y
 sudo apt install -y git
+git config --global user.name "Dein Name"
+git config --global user.email "deine-mail@example.com"
 ssh-keygen -t ed25519 -C "deine-mail@example.com"
+ssh -T git@github.com
 ```
-
-Public Key bei GitHub hinterlegen und Verbindung testen.
 
 ### 3. Repo klonen
 
@@ -45,7 +49,7 @@ chmod +x setup.sh scripts/*.sh
 ### 4. `.env` anpassen
 
 Beim ersten Lauf wird `.env` automatisch aus `.env.example` erstellt.
-Danach bitte mindestens `SERVER_USER` und `POSTGRES_PASSWORD` prüfen.
+Danach bitte mindestens `SERVER_USER`, `POSTGRES_USER`, `POSTGRES_PASSWORD` und `POSTGRES_DB` prüfen.
 
 ### 5. Komplettes Setup starten
 
@@ -59,29 +63,109 @@ Mit Debug-Ausgabe:
 DEBUG=true ./setup.sh
 ```
 
+Mit interaktiver Bestätigung pro Schritt:
 
-### Ablauf-Schnelldurchlauf
-
-```sh
-sudo apt update
-sudo apt upgrade -y
-sudo apt install -y git
-
-git config --global user.name "..."
-git config --global user.email "..."
-
-ssh-keygen -t ed25519 -C "..."
-ssh -T git@github.com
-
-git clone <repo>
-cd <repo>
-
-chmod +x setup.sh scripts/*.sh
-cp .env.example .env
-
-./setup.sh
+```bash
+./setup.sh --dev
 ```
 
+## Teil-Läufe für Entwicklung und Debugging
+
+Nur bestimmte Schritte ausführen:
+
+```bash
+./setup.sh --only validate,start,status
+```
+
+Bestimmte Schritte überspringen:
+
+```bash
+./setup.sh --skip bootstrap,preflight
+```
+
+Container beim Setup nicht starten:
+
+```bash
+./setup.sh --no-start
+```
+
+Nur ausgewählte Services neu starten:
+
+```bash
+./setup.sh --only start,status --services uptime-kuma
+./setup.sh --only start,status --services nginx
+./setup.sh --only start,status --services nginx,uptime-kuma
+```
+
+## Direkt nutzbare Service-Skripte
+
+Nur Kuma neu starten:
+
+```bash
+./scripts/start.sh uptime-kuma
+```
+
+Nginx und Kuma neu starten:
+
+```bash
+./scripts/start.sh nginx uptime-kuma
+```
+
+Status nur für bestimmte Services:
+
+```bash
+./scripts/status.sh nginx uptime-kuma
+```
+
+Logs nur für einen Service:
+
+```bash
+./scripts/logs.sh uptime-kuma
+```
+
+Einen Service stoppen:
+
+```bash
+./scripts/stop.sh uptime-kuma
+```
+
+## Zugriff auf Services
+
+### Monitoring
+
+Empfohlen per vHost:
+
+```text
+http://monitoring.local
+```
+
+Dafür muss `monitoring.local` auf die IP des Pi zeigen, z. B. über die lokale `hosts`-Datei.
+
+Beispiel:
+
+```text
+192.168.178.50 monitoring.local
+```
+
+### Postgres vom PC aus per SSH-Tunnel
+
+Der Postgres-Port ist nur lokal auf dem Pi veröffentlicht:
+
+```text
+127.0.0.1:15432
+```
+
+Tunnel vom PC:
+
+```bash
+ssh -L 5432:127.0.0.1:15432 serveradmin@server
+```
+
+Danach in DBeaver oder pgAdmin:
+
+- Host: `localhost`
+- Port: `5432`
+- User / Passwort / DB aus `.env`
 
 ## Wichtige Kurzbefehle
 
@@ -92,6 +176,9 @@ make up
 make down
 make status
 make logs
+make restart-kuma
+make restart-nginx
+make restart-monitoring
 ```
 
 ## Backups
@@ -100,14 +187,6 @@ make logs
 ./scripts/backup-postgres.sh
 ./scripts/backup-data.sh
 ./scripts/restore-postgres.sh /pfad/zur/datei.sql
-```
-
-## Monitoring
-
-Nach erfolgreichem Start erreichbar unter:
-
-```text
-http://<PI-IP>/monitoring/
 ```
 
 ## Dokumentation
