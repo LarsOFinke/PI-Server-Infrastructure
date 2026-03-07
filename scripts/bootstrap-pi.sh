@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-exec bash "$ROOT_DIR/scripts/legacy/bootstrap-pi.sh" "$@"
+exec bash "$ROOT_DIR/scripts/host/bootstrap.sh" "$@"

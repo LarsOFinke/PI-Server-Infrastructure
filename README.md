@@ -200,3 +200,19 @@ make restart-monitoring
 - `docs/troubleshooting.md`
 - `docs/restore-guide.md`
 - `docs/refactoring/v1-plan.md`
+
+
+## Refactoring v2
+
+Das Host-Bootstrap wurde weiter zerlegt. Die eigentliche Host-Einrichtung liegt jetzt unter `scripts/host/`, während `scripts/setup/bootstrap-host.sh` nur noch die Ausführung orchestriert.
+
+Wichtige Dateien:
+
+- `scripts/host/bootstrap.sh`
+- `scripts/host/common.sh`
+- `scripts/host/config.sh`
+- `scripts/host/lib/system.sh`
+- `scripts/host/lib/filesystem.sh`
+- `scripts/host/lib/security.sh`
+- `scripts/host/lib/docker.sh`
+- `scripts/host/lib/summary.sh`
