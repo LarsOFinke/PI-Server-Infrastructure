@@ -15,7 +15,14 @@ warn() {
 section "Grundlegende Dateien prüfen"
 [[ -f "$ROOT_DIR/compose.yml" ]] || { echo "compose.yml fehlt."; exit 1; }
 [[ -f "$ROOT_DIR/.env.example" ]] || { echo ".env.example fehlt."; exit 1; }
-[[ -f "$ROOT_DIR/.env" ]] || warn ".env fehlt noch. Vor dem Start bitte ./scripts/init-env.sh ausführen."
+[[ -f "$ROOT_DIR/.env" ]] || { echo ".env fehlt."; exit 1; }
+[[ -f "$ROOT_DIR/nginx/nginx.conf" ]] || { echo "nginx/nginx.conf fehlt."; exit 1; }
+[[ -f "$ROOT_DIR/nginx/conf.d/monitoring.conf" ]] || { echo "nginx/conf.d/monitoring.conf fehlt."; exit 1; }
+
+section "Datenverzeichnisse prüfen"
+[[ -d "$ROOT_DIR/data/nginx" ]] || { echo "data/nginx fehlt."; exit 1; }
+[[ -d "$ROOT_DIR/data/postgres" ]] || { echo "data/postgres fehlt."; exit 1; }
+[[ -d "$ROOT_DIR/data/uptime-kuma" ]] || { echo "data/uptime-kuma fehlt."; exit 1; }
 
 section "Docker prüfen"
 if ! command -v docker >/dev/null 2>&1; then
@@ -25,10 +32,8 @@ fi
 
 docker --version
 
-actionable_group_hint="Falls 'permission denied' erscheint: neu anmelden oder kurzzeitig mit sudo arbeiten."
-
 section "Docker Compose prüfen"
-docker compose version || { echo "Docker Compose Plugin fehlt. ${actionable_group_hint}"; exit 1; }
+docker compose version || { echo "Docker Compose Plugin fehlt oder Benutzerrechte greifen noch nicht."; exit 1; }
 
 section "Docker-Dienst prüfen"
 if ! systemctl is-active --quiet docker; then
@@ -43,4 +48,5 @@ echo "compose.yml ist gültig."
 
 section "Hinweise"
 echo "Der Host ist vorbereitet."
-echo "Als Nächstes: ./scripts/start.sh"
+echo "Die Monitoring-Konfiguration ist im Repo enthalten."
+echo "Als Nächstes startet setup.sh automatisch die Infrastruktur."

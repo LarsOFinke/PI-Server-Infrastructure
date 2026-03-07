@@ -9,6 +9,8 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
+mkdir -p data/nginx data/postgres data/uptime-kuma
+
 docker compose up -d
 
 echo

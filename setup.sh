@@ -1,123 +1,71 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-########################################
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$ROOT_DIR/logs"
+LOG_FILE="$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log"
+mkdir -p "$LOG_DIR"
 
-# Server Infrastructure Setup Script
+log() {
+  echo
+  echo "==> $1"
+}
 
-########################################
+on_error() {
+  local exit_code="$?"
+  local line_no="${1:-unknown}"
+  echo
+  echo "Fehler in setup.sh in Zeile ${line_no} (Exit-Code: ${exit_code})."
+  echo "Log: ${LOG_FILE}"
+  exit "$exit_code"
+}
+trap 'on_error $LINENO' ERR
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
+exec > >(tee -a "$LOG_FILE") 2>&1
 
-echo "================================="
-echo "Server Infrastructure Setup"
-echo "================================="
+cd "$ROOT_DIR"
 
-########################################
+log "Server-Setup wird gestartet"
+echo "Repo: $ROOT_DIR"
+echo "Log:  $LOG_FILE"
 
-# ENV FILE LADEN
+log ".env vorbereiten"
+bash "$ROOT_DIR/scripts/init-env.sh"
 
-########################################
+log ".env laden"
+set -a
+source "$ROOT_DIR/.env"
+set +a
+USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-smokenougat}}}"
+echo "Server-Benutzer: $USERNAME"
 
-if [ -f ".env" ]; then
-echo "Loading .env configuration..."
-source .env
-else
-echo "ERROR: .env file not found."
-echo "Please create it from .env.example"
-exit 1
+log "Host-Bootstrap ausführen"
+sudo SERVER_USER="$USERNAME" bash "$ROOT_DIR/scripts/bootstrap-pi.sh"
+
+log "Datenverzeichnisse erstellen"
+mkdir -p \
+  "$ROOT_DIR/data/nginx" \
+  "$ROOT_DIR/data/postgres" \
+  "$ROOT_DIR/data/uptime-kuma"
+chmod -R 750 "$ROOT_DIR/data"
+if id "$USERNAME" >/dev/null 2>&1; then
+  chown -R "$USERNAME:$USERNAME" "$ROOT_DIR/data"
 fi
 
-########################################
+log "Compose-Konfiguration validieren"
+docker compose --env-file "$ROOT_DIR/.env" config >/dev/null
 
-# USER ERMITTELN
+actionable_group_hint="Falls 'permission denied' erscheint: bitte einmal neu anmelden oder rebooten und setup.sh erneut starten."
 
-########################################
+log "Post-Setup-Checks ausführen"
+bash "$ROOT_DIR/scripts/post-setup-check.sh"
 
-USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-pi}}}"
+log "Infrastruktur starten"
+bash "$ROOT_DIR/scripts/start.sh"
 
-echo "Using user: $USERNAME"
+log "Status anzeigen"
+bash "$ROOT_DIR/scripts/status.sh"
 
-########################################
-
-# BOOTSTRAP HOST
-
-########################################
-
-echo
-echo "Running host bootstrap..."
-bash scripts/bootstrap-pi.sh
-
-########################################
-
-# DATA DIRECTORIES
-
-########################################
-
-echo
-echo "Creating data directories..."
-
-mkdir -p data/postgres
-mkdir -p data/nginx
-mkdir -p data/monitoring
-
-chmod -R 750 data
-
-echo "Data directories ready."
-
-########################################
-
-# DOCKER CHECK
-
-########################################
-
-echo
-echo "Checking Docker..."
-
-if ! command -v docker &> /dev/null; then
-echo "ERROR: Docker not installed."
-exit 1
-fi
-
-echo "Docker version:"
-docker --version
-
-if ! docker compose version &> /dev/null; then
-echo "ERROR: Docker Compose plugin missing."
-exit 1
-fi
-
-########################################
-
-# OPTIONAL: START INFRASTRUCTURE
-
-########################################
-
-echo
-read -p "Start infrastructure containers now? (y/N): " START_CONTAINERS
-
-if [[ "$START_CONTAINERS" =~ ^[Yy]$ ]]; then
-echo "Starting containers..."
-docker compose up -d
-else
-echo "Skipping container startup."
-fi
-
-########################################
-
-# STATUS INFO
-
-########################################
-
-echo
-echo "================================="
-echo "Setup finished"
-echo "================================="
-
-echo "Next steps:"
-echo "1) logout/login if docker group was added"
-echo "2) start infrastructure:"
-echo "   docker compose up -d"
-echo "3) check status:"
-echo "   docker compose ps"
+log "Setup abgeschlossen"
+echo "Monitoring: http://<PI-IP>/monitoring/"
+echo "Hinweis: ${actionable_group_hint}"

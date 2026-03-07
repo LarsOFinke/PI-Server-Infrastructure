@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-[ -f .env ] && source .env
-USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-user}}}"
+
+USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-smokenougat}}}"
 USER_HOME="$(getent passwd "$USERNAME" | cut -d: -f6 || true)"
 INSTALL_TMPFS="true"
 DISABLE_ROOT_SSH="true"
@@ -26,7 +26,7 @@ require_root() {
 require_user() {
   if [[ -z "$USER_HOME" ]]; then
     echo "Konnte Home-Verzeichnis für Benutzer '$USERNAME' nicht ermitteln."
-    echo "Bitte das Script mit sudo als Zielbenutzer starten, z. B.: sudo bash ./setup.sh"
+    echo "Bitte SERVER_USER in .env prüfen oder das Script mit sudo als Zielbenutzer starten."
     exit 1
   fi
 }
