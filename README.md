@@ -59,6 +59,30 @@ Mit Debug-Ausgabe:
 DEBUG=true ./setup.sh
 ```
 
+
+### Ablauf-Schnelldurchlauf
+
+```sh
+sudo apt update
+sudo apt upgrade -y
+sudo apt install -y git
+
+git config --global user.name "..."
+git config --global user.email "..."
+
+ssh-keygen -t ed25519 -C "..."
+ssh -T git@github.com
+
+git clone <repo>
+cd <repo>
+
+chmod +x setup.sh scripts/*.sh
+cp .env.example .env
+
+./setup.sh
+```
+
+
 ## Wichtige Kurzbefehle
 
 ```bash
