@@ -121,10 +121,10 @@ interactive_feature_selection() {
   local selected=()
   local feature default="false"
 
-  echo
-  echo "Feature-Auswahl"
-  echo "Bitte wähle aus, welche Bereiche eingerichtet werden sollen."
-  echo
+  echo >&2
+  echo "Feature-Auswahl" >&2
+  echo "Bitte wähle aus, welche Bereiche eingerichtet werden sollen." >&2
+  echo >&2
 
   for feature in "${AVAILABLE_FEATURES[@]}"; do
     default="false"
