@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
-
 [ -f .env ] && source .env
-USERNAME="${SERVER_USER}"
+USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-user}}}"
 USER_HOME="$(getent passwd "$USERNAME" | cut -d: -f6 || true)"
 INSTALL_TMPFS="true"
 DISABLE_ROOT_SSH="true"

@@ -1,42 +1,123 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_DIR="$ROOT_DIR/logs"
-LOG_FILE="$LOG_DIR/setup-$(date +%Y%m%d-%H%M%S).log"
-mkdir -p "$LOG_DIR"
+########################################
 
-log() {
-  echo
-  echo "==> $1"
-}
+# Server Infrastructure Setup Script
 
-on_error() {
-  local exit_code="$?"
-  local line_no="${1:-unknown}"
-  echo
-  echo "Fehler in setup.sh in Zeile ${line_no} (Exit-Code: ${exit_code})."
-  echo "Log: ${LOG_FILE}"
-  exit "$exit_code"
-}
-trap 'on_error $LINENO' ERR
+########################################
 
-exec > >(tee -a "$LOG_FILE") 2>&1
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
 
-log "Server-Setup wird gestartet"
-echo "Repo: $ROOT_DIR"
-echo "Log:  $LOG_FILE"
+echo "================================="
+echo "Server Infrastructure Setup"
+echo "================================="
 
-log "Host-Bootstrap ausführen"
-sudo bash "$ROOT_DIR/scripts/bootstrap-pi.sh"
+########################################
 
-log ".env vorbereiten"
-bash "$ROOT_DIR/scripts/init-env.sh"
+# ENV FILE LADEN
 
-log "Post-Setup-Checks ausführen"
-bash "$ROOT_DIR/scripts/post-setup-check.sh"
+########################################
 
-log "Hinweise"
-echo "1. Falls dein Benutzer gerade erst zur docker-Gruppe hinzugefügt wurde, bitte einmal neu anmelden oder rebooten."
-echo "2. Danach kannst du die Infrastruktur mit ./scripts/start.sh starten."
-echo "3. Mit ./scripts/status.sh prüfst du den aktuellen Zustand."
+if [ -f ".env" ]; then
+echo "Loading .env configuration..."
+source .env
+else
+echo "ERROR: .env file not found."
+echo "Please create it from .env.example"
+exit 1
+fi
+
+########################################
+
+# USER ERMITTELN
+
+########################################
+
+USERNAME="${SERVER_USER:-${SUDO_USER:-${USER:-pi}}}"
+
+echo "Using user: $USERNAME"
+
+########################################
+
+# BOOTSTRAP HOST
+
+########################################
+
+echo
+echo "Running host bootstrap..."
+bash scripts/bootstrap-pi.sh
+
+########################################
+
+# DATA DIRECTORIES
+
+########################################
+
+echo
+echo "Creating data directories..."
+
+mkdir -p data/postgres
+mkdir -p data/nginx
+mkdir -p data/monitoring
+
+chmod -R 750 data
+
+echo "Data directories ready."
+
+########################################
+
+# DOCKER CHECK
+
+########################################
+
+echo
+echo "Checking Docker..."
+
+if ! command -v docker &> /dev/null; then
+echo "ERROR: Docker not installed."
+exit 1
+fi
+
+echo "Docker version:"
+docker --version
+
+if ! docker compose version &> /dev/null; then
+echo "ERROR: Docker Compose plugin missing."
+exit 1
+fi
+
+########################################
+
+# OPTIONAL: START INFRASTRUCTURE
+
+########################################
+
+echo
+read -p "Start infrastructure containers now? (y/N): " START_CONTAINERS
+
+if [[ "$START_CONTAINERS" =~ ^[Yy]$ ]]; then
+echo "Starting containers..."
+docker compose up -d
+else
+echo "Skipping container startup."
+fi
+
+########################################
+
+# STATUS INFO
+
+########################################
+
+echo
+echo "================================="
+echo "Setup finished"
+echo "================================="
+
+echo "Next steps:"
+echo "1) logout/login if docker group was added"
+echo "2) start infrastructure:"
+echo "   docker compose up -d"
+echo "3) check status:"
+echo "   docker compose ps"
