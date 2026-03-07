@@ -1,60 +1,34 @@
 # Troubleshooting
 
-## Setup bricht beim Docker-Start mit "permission denied" ab
+## Docker-Zugriff nach dem ersten Setup fehlt
 
-Die docker-Gruppenzuweisung ist in der aktuellen Session noch nicht aktiv.
+Wenn `docker compose` mit `permission denied` auf `/var/run/docker.sock` fehlschlägt, wurde der Benutzer meist gerade erst zur `docker`-Gruppe hinzugefügt.
 
 Lösung:
 
-```bash
-logout
-# oder neue SSH-Session öffnen
-./setup.sh
+1. neu anmelden oder rebooten
+2. danach `./setup.sh` oder `./scripts/services/start.sh` erneut ausführen
+
+## monitoring.server funktioniert nicht
+
+Das Repo ist für `monitoring.server` vorbereitet. Wenn der Name nicht funktioniert, muss dein PC ihn lokal auf die Pi-IP auflösen.
+
+Beispiel Hosts-Eintrag:
+
+```text
+192.168.178.50 monitoring.server
 ```
 
-Alternativ:
-
-```bash
-newgrp docker
-./setup.sh
-```
-
-## Nur einen Service neu starten
-
-```bash
-./scripts/start.sh uptime-kuma
-./scripts/start.sh nginx
-./scripts/start.sh nginx uptime-kuma
-```
-
-## Status und Logs prüfen
-
-```bash
-./scripts/status.sh
-./scripts/status.sh uptime-kuma
-./scripts/logs.sh nginx
-./scripts/logs.sh uptime-kuma
-```
-
-## Nginx-Konfiguration testen und neu laden
+## Nginx-Config prüfen
 
 ```bash
 docker compose exec nginx nginx -t
-docker compose exec nginx nginx -s reload
+docker compose exec nginx nginx -T
 ```
 
-## Uptime Kuma über vHost statt Unterpfad
-
-Das Repo ist für `monitoring.local` vorbereitet. Wenn der Name nicht funktioniert, muss dein PC ihn lokal auf die Pi-IP auflösen.
-
-Beispiel hosts-Datei:
-
-```text
-192.168.178.50 monitoring.local
-```
-
-## Postgres sicher vom PC aus erreichen
+## Nur einzelne Services neu starten
 
 ```bash
-ssh -L 5432:127.0.0.1:15432 serveradmin@server
+./setup.sh --only start,status --services uptime-kuma
+./scripts/services/restart.sh nginx uptime-kuma
 ```

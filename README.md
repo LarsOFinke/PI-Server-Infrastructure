@@ -1,22 +1,44 @@
-# Server Infrastructure Repo
+# PI Server Infrastructure
 
-Dieses Repo richtet die Basis-Infrastruktur auf dem Raspberry Pi ein und unterstützt zwei Modi:
+Dieses Repo richtet die Basis-Infrastruktur auf einem Raspberry Pi oder Debian-Host ein. Nach Refactoring v1 ist das Repo in klar getrennte Bereiche aufgeteilt:
 
-- **vollständiges Setup** für einen frischen Pi
-- **gezielte Teil-Läufe** für die Entwicklung, z. B. nur `nginx` oder nur `uptime-kuma`
+- `setup.sh` orchestriert nur noch den Ablauf
+- `scripts/common/` enthält wiederverwendbare Hilfsfunktionen
+- `scripts/setup/` enthält Setup-Schritte
+- `scripts/services/` enthält tägliche Docker-Operationen
+- `scripts/backup/` enthält Backup- und Restore-Skripte
+- `scripts/legacy/` enthält historisch gewachsene Host-Skripte
 
-## Enthalten
+## Architektur des Repos
 
-- Host-Bootstrap per `scripts/bootstrap-pi.sh`
+```text
+PI-Server-Infrastructure/
+├── setup.sh
+├── compose.yml
+├── config/
+│   └── env/
+├── db/
+├── docs/
+├── nginx/
+├── data/
+├── logs/
+└── scripts/
+    ├── common/
+    ├── setup/
+    ├── services/
+    ├── backup/
+    └── legacy/
+```
+
+## Enthaltene Infrastruktur
+
 - Nginx als Reverse Proxy
 - Postgres als interne Datenbank
 - Uptime Kuma als Monitoring
 - Docker-Netzwerke für Frontend und Backend
-- automatische Erstellung der `data/`-Ordner
-- Preflight-Checks und `.env`-Validierung
-- Setup-Logging und optionaler Debug-Modus
+- lokaler Postgres-Port auf `127.0.0.1:15432`
+- Setup-Logging, Dev-Modus und selektive Schrittsteuerung
 - Backup- und Restore-Skripte
-- Dokumentation für Architektur, Ports und Troubleshooting
 
 ## Einmaliger Ablauf auf einem frischen Pi
 
@@ -43,13 +65,13 @@ ssh -T git@github.com
 ```bash
 git clone <DEIN-REPO-URL> ~/repositories/server
 cd ~/repositories/server
-chmod +x setup.sh scripts/*.sh
+chmod +x setup.sh scripts/*.sh scripts/*/*.sh
 ```
 
 ### 4. `.env` anpassen
 
 Beim ersten Lauf wird `.env` automatisch aus `.env.example` erstellt.
-Danach bitte mindestens `SERVER_USER`, `POSTGRES_USER`, `POSTGRES_PASSWORD` und `POSTGRES_DB` prüfen.
+Pflichtschlüssel stehen in `config/env/required.env.keys`.
 
 ### 5. Komplettes Setup starten
 
@@ -69,7 +91,7 @@ Mit interaktiver Bestätigung pro Schritt:
 ./setup.sh --dev
 ```
 
-## Teil-Läufe für Entwicklung und Debugging
+## Setup gezielt steuern
 
 Nur bestimmte Schritte ausführen:
 
@@ -97,37 +119,18 @@ Nur ausgewählte Services neu starten:
 ./setup.sh --only start,status --services nginx,uptime-kuma
 ```
 
-## Direkt nutzbare Service-Skripte
-
-Nur Kuma neu starten:
+## Service-Skripte für den Alltag
 
 ```bash
-./scripts/start.sh uptime-kuma
+./scripts/services/start.sh uptime-kuma
+./scripts/services/start.sh nginx uptime-kuma
+./scripts/services/status.sh nginx uptime-kuma
+./scripts/services/logs.sh uptime-kuma
+./scripts/services/stop.sh uptime-kuma
+./scripts/services/restart.sh nginx uptime-kuma
 ```
 
-Nginx und Kuma neu starten:
-
-```bash
-./scripts/start.sh nginx uptime-kuma
-```
-
-Status nur für bestimmte Services:
-
-```bash
-./scripts/status.sh nginx uptime-kuma
-```
-
-Logs nur für einen Service:
-
-```bash
-./scripts/logs.sh uptime-kuma
-```
-
-Einen Service stoppen:
-
-```bash
-./scripts/stop.sh uptime-kuma
-```
+Für Rückwärtskompatibilität funktionieren auch die Wrapper unter `scripts/` weiter.
 
 ## Zugriff auf Services
 
@@ -136,15 +139,15 @@ Einen Service stoppen:
 Empfohlen per vHost:
 
 ```text
-http://monitoring.local
+http://monitoring.server
 ```
 
-Dafür muss `monitoring.local` auf die IP des Pi zeigen, z. B. über die lokale `hosts`-Datei.
+Damit `monitoring.server` auf die IP des Pi zeigt, brauchst du einen lokalen DNS- oder Hosts-Eintrag.
 
 Beispiel:
 
 ```text
-192.168.178.50 monitoring.local
+192.168.178.50 monitoring.server
 ```
 
 ### Postgres vom PC aus per SSH-Tunnel
@@ -170,6 +173,7 @@ Danach in DBeaver oder pgAdmin:
 ## Wichtige Kurzbefehle
 
 ```bash
+make setup
 make preflight
 make validate
 make up
@@ -184,9 +188,9 @@ make restart-monitoring
 ## Backups
 
 ```bash
-./scripts/backup-postgres.sh
-./scripts/backup-data.sh
-./scripts/restore-postgres.sh /pfad/zur/datei.sql
+./scripts/backup/backup-postgres.sh
+./scripts/backup/backup-data.sh
+./scripts/backup/restore-postgres.sh /pfad/zur/datei.sql
 ```
 
 ## Dokumentation
@@ -195,3 +199,4 @@ make restart-monitoring
 - `docs/ports-and-networks.md`
 - `docs/troubleshooting.md`
 - `docs/restore-guide.md`
+- `docs/refactoring/v1-plan.md`

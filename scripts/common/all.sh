@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+source "$ROOT_DIR/scripts/common/log.sh"
+source "$ROOT_DIR/scripts/common/error.sh"
+source "$ROOT_DIR/scripts/common/paths.sh"
+source "$ROOT_DIR/scripts/common/collections.sh"
+source "$ROOT_DIR/scripts/common/args.sh"
+source "$ROOT_DIR/scripts/common/env.sh"
+source "$ROOT_DIR/scripts/common/fs.sh"
+source "$ROOT_DIR/scripts/common/docker.sh"
+source "$ROOT_DIR/scripts/common/steps.sh"
