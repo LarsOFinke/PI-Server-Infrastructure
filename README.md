@@ -2,6 +2,10 @@
 
 Dieses Repo richtet die Basis-Infrastruktur auf einem Raspberry Pi oder Debian-Host ein und hält das Setup bewusst modular.
 
+## Refactoring-Stand
+
+Das Repo wurde bis **Refactoring v4** konsolidiert. Gemeinsame Prüf- und Hilfslogik liegt nun zentral in `scripts/common/`, während Setup-, Service- und Backup-Skripte bewusst dünn gehalten sind.
+
 ## Zielbild
 
 Die Infrastruktur besteht aus:
