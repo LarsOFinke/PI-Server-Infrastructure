@@ -1,10 +1,17 @@
 # PI Server Infrastructure
 
-Dieses Repo richtet die Basis-Infrastruktur auf einem Raspberry Pi oder Debian-Host ein und hält das Setup bewusst modular.
+Dieses Repo richtet die Basis-Infrastruktur auf einem Raspberry Pi oder Debian-Host ein und hält das Setup modular, reproduzierbar und bewusst schlank.
 
-## Refactoring-Stand
+## Aktueller Stand
 
-Das Repo wurde bis **Refactoring v4** konsolidiert. Gemeinsame Prüf- und Hilfslogik liegt nun zentral in `scripts/common/`, während Setup-, Service- und Backup-Skripte bewusst dünn gehalten sind.
+Das Repo ist bis **Refactoring v5** aufgeräumt.
+
+Die wichtigsten Prinzipien sind jetzt:
+
+- `setup.sh` orchestriert nur noch
+- gemeinsame Shell-Logik liegt zentral in `scripts/lib/`
+- nur wenige echte Benutzer-Commands bleiben als Skripte erhalten
+- interne Mini-Wrapper aus früheren Refactorings wurden entfernt
 
 ## Zielbild
 
@@ -14,7 +21,7 @@ Die Infrastruktur besteht aus:
 - `postgres` als interne Datenbank
 - `uptime-kuma` als Monitoring
 - Host-Bootstrap für Docker, Firewall, SSH-Härtung und Standardverzeichnisse
-- Backup- und Restore-Skripten
+- Backup- und Restore-Kommandos
 
 ## Repo-Struktur
 
@@ -30,12 +37,40 @@ PI-Server-Infrastructure/
 ├── data/
 ├── logs/
 └── scripts/
-    ├── common/
+    ├── lib/
     ├── host/
-    ├── setup/
     ├── services/
     └── backup/
 ```
+
+## Library vs. Commands
+
+### Libraries
+
+` scripts/lib/ ` enthält nur wiederverwendbare Funktionen, zum Beispiel für:
+
+- Logging
+- Fehlerbehandlung
+- Feature-Auswahl
+- `.env`-Handling
+- Dateisystem-Operationen
+- Docker-/Compose-Kommandos
+- Checks und Validierung
+- Backup-Logik
+
+### Commands
+
+Als direkte Benutzer-Kommandos bleiben bewusst nur wenige Skripte erhalten:
+
+- `setup.sh`
+- `scripts/services/start.sh`
+- `scripts/services/stop.sh`
+- `scripts/services/status.sh`
+- `scripts/services/logs.sh`
+- `scripts/services/restart.sh`
+- `scripts/backup/backup-postgres.sh`
+- `scripts/backup/backup-data.sh`
+- `scripts/backup/restore-postgres.sh`
 
 ## Feature-basierter Setup-Ablauf
 
@@ -125,8 +160,6 @@ Verfügbare Profile:
 
 ## Container und Services im Alltag
 
-Services gezielt starten oder aktualisieren:
-
 ```bash
 ./scripts/services/start.sh uptime-kuma
 ./scripts/services/start.sh nginx uptime-kuma
@@ -178,14 +211,14 @@ Danach in DBeaver oder pgAdmin:
 make setup
 make setup-core
 make setup-monitoring
-make preflight
-make validate
 make up
 make down
 make status
 make logs
 make restart-kuma
 make restart-monitoring
+make backup-postgres
+make backup-data
 ```
 
 ## Backups
@@ -205,3 +238,5 @@ make restart-monitoring
 - `docs/refactoring/v1-plan.md`
 - `docs/refactoring/v2-plan.md`
 - `docs/refactoring/v3-plan.md`
+- `docs/refactoring/v4-plan.md`
+- `docs/refactoring/v5-plan.md`

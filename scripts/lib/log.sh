@@ -19,6 +19,11 @@ error() {
   echo "FEHLER: $1" >&2
 }
 
+section() {
+  echo
+  echo "==> $1"
+}
+
 init_logging() {
   local root_dir="$1"
   LOG_DIR="$root_dir/logs"

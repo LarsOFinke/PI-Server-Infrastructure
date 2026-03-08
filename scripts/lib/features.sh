@@ -1,26 +1,26 @@
 #!/usr/bin/env bash
 
 AVAILABLE_FEATURES=(
-  "host"
-  "nginx"
-  "postgres"
-  "monitoring"
-  "backup"
-  "checks"
+  host
+  nginx
+  postgres
+  monitoring
+  backup
+  checks
 )
 
 DEFAULT_FEATURES=(
-  "host"
-  "nginx"
-  "postgres"
-  "monitoring"
-  "checks"
+  host
+  nginx
+  postgres
+  monitoring
+  checks
 )
 
 AVAILABLE_SERVICES=(
-  "nginx"
-  "postgres"
-  "uptime-kuma"
+  nginx
+  postgres
+  uptime-kuma
 )
 
 feature_description() {
@@ -39,9 +39,7 @@ validate_feature_names() {
   local feature
   for feature in "$@"; do
     [[ -z "$feature" ]] && continue
-    if ! contains_element "$feature" "${AVAILABLE_FEATURES[@]}"; then
-      fail "Unbekanntes Feature: '$feature'"
-    fi
+    contains_element "$feature" "${AVAILABLE_FEATURES[@]}" || fail "Unbekanntes Feature: '$feature'"
   done
 }
 
@@ -49,9 +47,7 @@ validate_service_names() {
   local service
   for service in "$@"; do
     [[ -z "$service" ]] && continue
-    if ! contains_element "$service" "${AVAILABLE_SERVICES[@]}"; then
-      fail "Unbekannter Service: '$service'"
-    fi
+    contains_element "$service" "${AVAILABLE_SERVICES[@]}" || fail "Unbekannter Service: '$service'"
   done
 }
 
@@ -61,16 +57,16 @@ expand_profile_features() {
       printf '%s\n' "${DEFAULT_FEATURES[@]}"
       ;;
     full)
-      printf '%s\n' "${DEFAULT_FEATURES[@]}" "backup"
+      printf '%s\n' "${DEFAULT_FEATURES[@]}" backup
       ;;
     host-only)
-      printf '%s\n' "host" "checks"
+      printf '%s\n' host checks
       ;;
     services)
-      printf '%s\n' "nginx" "postgres" "monitoring" "checks"
+      printf '%s\n' nginx postgres monitoring checks
       ;;
     monitoring-only)
-      printf '%s\n' "monitoring" "checks"
+      printf '%s\n' monitoring checks
       ;;
     *)
       fail "Unbekanntes Profil: '$1'"
@@ -96,10 +92,7 @@ prompt_yes_no() {
   local answer=""
   local hint="[y/N]"
 
-  case "$default_value" in
-    true) hint="[Y/n]" ;;
-    false) hint="[y/N]" ;;
-  esac
+  [[ "$default_value" == "true" ]] && hint="[Y/n]"
 
   while true; do
     read -r -p "$prompt $hint " answer || true
@@ -119,7 +112,7 @@ prompt_yes_no() {
 
 interactive_feature_selection() {
   local selected=()
-  local feature default="false"
+  local feature default=false
 
   echo >&2
   echo "Feature-Auswahl" >&2
@@ -127,18 +120,15 @@ interactive_feature_selection() {
   echo >&2
 
   for feature in "${AVAILABLE_FEATURES[@]}"; do
-    default="false"
-    contains_element "$feature" "${DEFAULT_FEATURES[@]}" && default="true"
+    default=false
+    contains_element "$feature" "${DEFAULT_FEATURES[@]}" && default=true
 
     if prompt_yes_no "- ${feature}: $(feature_description "$feature")" "$default"; then
       selected+=("$feature")
     fi
   done
 
-  if [[ "${#selected[@]}" -eq 0 ]]; then
-    fail "Es wurde kein Feature ausgewählt."
-  fi
-
+  [[ "${#selected[@]}" -gt 0 ]] || fail "Es wurde kein Feature ausgewählt."
   printf '%s\n' "${selected[@]}"
 }
 
@@ -147,9 +137,9 @@ selected_features_to_services() {
   local feature
   for feature in "$@"; do
     case "$feature" in
-      nginx) services+=("nginx") ;;
-      postgres) services+=("postgres") ;;
-      monitoring) services+=("uptime-kuma") ;;
+      nginx) services+=(nginx) ;;
+      postgres) services+=(postgres) ;;
+      monitoring) services+=(uptime-kuma) ;;
     esac
   done
   normalize_selected_features "${services[@]}"

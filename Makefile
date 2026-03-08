@@ -1,6 +1,6 @@
 SHELL := /usr/bin/env bash
 
-.PHONY: setup setup-core setup-monitoring preflight validate up down status logs restart-kuma restart-nginx restart-monitoring backup-postgres backup-data restore-postgres
+.PHONY: setup setup-core setup-monitoring up down status logs restart-kuma restart-nginx restart-monitoring backup-postgres backup-data restore-postgres
 
 setup:
 	./setup.sh
@@ -10,12 +10,6 @@ setup-core:
 
 setup-monitoring:
 	./setup.sh --features monitoring,checks --non-interactive
-
-preflight:
-	./scripts/setup/preflight.sh
-
-validate:
-	./scripts/setup/validate-compose.sh
 
 up:
 	./scripts/services/start.sh

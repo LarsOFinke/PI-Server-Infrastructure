@@ -6,7 +6,7 @@ if [[ "${DEBUG:-false}" == "true" ]]; then
 fi
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$ROOT_DIR/scripts/common/all.sh"
+source "$ROOT_DIR/scripts/lib/all.sh"
 
 setup_error_trap
 ensure_repo_dirs
@@ -32,9 +32,7 @@ resolve_selected_features() {
   mapfile -t resolved < <(normalize_selected_features "${resolved[@]}")
   validate_feature_names "${resolved[@]}"
 
-  if [[ "${#resolved[@]}" -eq 0 ]]; then
-    fail "Es wurden keine Features ausgewählt."
-  fi
+  [[ "${#resolved[@]}" -gt 0 ]] || fail "Es wurden keine Features ausgewählt."
 
   SELECTED_FEATURES=("${resolved[@]}")
   mapfile -t TARGET_SERVICES < <(selected_features_to_services "${SELECTED_FEATURES[@]}")
@@ -50,13 +48,6 @@ show_runtime_summary() {
   echo "Feature profile: ${FEATURE_PROFILE:-custom}"
   echo "Ausgewählte Features: ${SELECTED_FEATURES[*]}"
   echo "Ziel-Services: ${TARGET_SERVICES[*]:-(keine)}"
-}
-
-run_task() {
-  local label="$1"
-  shift
-  log "$label"
-  "$@"
 }
 
 needs_any_feature() {
@@ -75,37 +66,50 @@ main() {
   resolve_selected_features
   show_runtime_summary
 
-  run_task ".env vorbereiten" bash "$ROOT_DIR/scripts/setup/init-env.sh"
-  run_task ".env laden" bash "$ROOT_DIR/scripts/setup/load-env.sh"
-  load_runtime_env
+  log ".env vorbereiten"
+  init_env_file
 
-  run_task "Preflight-Checks ausführen" bash "$ROOT_DIR/scripts/setup/preflight.sh"
-  run_task ".env validieren" bash "$ROOT_DIR/scripts/setup/validate-env.sh"
+  log ".env laden"
+  load_runtime_env
+  echo "Server-Benutzer: $USERNAME"
+
+  log ".env validieren"
+  validate_env_file
+
+  log "Preflight-Checks ausführen"
+  run_preflight_checks
 
   if needs_any_feature host; then
-    run_task "Host-Bootstrap ausführen" bash "$ROOT_DIR/scripts/setup/bootstrap-host.sh"
+    log "Host-Bootstrap ausführen"
+    bash "$ROOT_DIR/scripts/host/bootstrap.sh"
   else
     info "SKIP: Host-Bootstrap wurde nicht ausgewählt."
   fi
 
   if needs_any_feature nginx postgres monitoring; then
-    run_task "Datenverzeichnisse erstellen" bash "$ROOT_DIR/scripts/setup/prepare-data-dirs.sh" "${TARGET_SERVICES[@]}"
-    run_task "Compose-Konfiguration validieren" bash "$ROOT_DIR/scripts/setup/validate-compose.sh"
+    log "Datenverzeichnisse erstellen"
+    prepare_service_data_dirs "${TARGET_SERVICES[@]}"
+
+    log "Compose-Konfiguration validieren"
+    validate_compose_config
+    echo "Compose-Konfiguration ist gültig."
   else
     info "SKIP: Keine Container-Features ausgewählt."
   fi
 
   if needs_any_feature backup; then
-    run_task "Backup-Verzeichnisse vorbereiten" bash "$ROOT_DIR/scripts/setup/prepare-backups.sh"
+    log "Backup-Verzeichnisse vorbereiten"
+    prepare_backup_dirs
   else
     info "SKIP: Backup-Feature wurde nicht ausgewählt."
   fi
 
   if needs_any_feature checks; then
+    log "Post-Setup-Checks ausführen"
     if needs_any_feature nginx postgres monitoring; then
-      run_task "Post-Setup-Checks ausführen" bash "$ROOT_DIR/scripts/setup/post-check.sh" "${TARGET_SERVICES[@]}"
+      run_post_checks false "${TARGET_SERVICES[@]}"
     else
-      run_task "Post-Setup-Checks ausführen" bash "$ROOT_DIR/scripts/setup/post-check.sh" --skip-data
+      run_post_checks true
     fi
   else
     info "SKIP: Zusätzliche Checks wurden nicht ausgewählt."
@@ -115,8 +119,10 @@ main() {
     info "SKIP: Container-Start wurde mit --no-start deaktiviert."
   elif needs_any_feature nginx postgres monitoring; then
     ensure_docker_session
-    run_task "Infrastruktur starten" bash "$ROOT_DIR/scripts/setup/start-infra.sh" "${TARGET_SERVICES[@]}"
-    run_task "Status anzeigen" bash "$ROOT_DIR/scripts/setup/show-status.sh" "${TARGET_SERVICES[@]}"
+    log "Infrastruktur starten"
+    compose_start "${TARGET_SERVICES[@]}"
+    log "Status anzeigen"
+    compose_status "${TARGET_SERVICES[@]}"
   else
     info "SKIP: Keine Container-Features zum Starten ausgewählt."
   fi

@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-source "$ROOT_DIR/scripts/common/all.sh"
+source "$ROOT_DIR/scripts/lib/all.sh"
+setup_error_trap
 cd "$ROOT_DIR"
-ensure_env_file
-validate_service_names "$@"
-if [[ "$#" -gt 0 ]]; then
-  compose_cmd logs --tail=200 "$@"
-else
-  compose_cmd logs --tail=200
-fi
+load_runtime_env
+compose_logs "$@"

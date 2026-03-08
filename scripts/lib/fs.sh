@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-ensure_repo_dirs() {
-  mkdir -p "$ROOT_DIR/logs" "$ROOT_DIR/data"
-}
-
 service_data_dir() {
   case "$1" in
     nginx) echo "$ROOT_DIR/data/nginx" ;;
@@ -36,6 +32,17 @@ apply_data_permissions() {
   fi
 }
 
+prepare_service_data_dirs() {
+  ensure_data_dirs "$@"
+  apply_data_permissions
+
+  if [[ "$#" -gt 0 ]]; then
+    echo "Datenverzeichnisse wurden vorbereitet für: $*"
+  else
+    echo "Alle Datenverzeichnisse sind vorbereitet."
+  fi
+}
+
 ensure_backup_dirs() {
   mkdir -p /srv/backups/postgres /srv/backups/data
 
@@ -44,4 +51,13 @@ ensure_backup_dirs() {
   fi
 
   chmod -R 770 /srv/backups
+}
+
+prepare_backup_dirs() {
+  ensure_backup_dirs
+  cat <<'EOF_MSG'
+Backup-Verzeichnisse sind vorbereitet:
+- /srv/backups/postgres
+- /srv/backups/data
+EOF_MSG
 }

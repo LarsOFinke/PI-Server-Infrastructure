@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-exec bash "$ROOT_DIR/scripts/setup/start-infra.sh" "$@"
+source "$ROOT_DIR/scripts/lib/all.sh"
+setup_error_trap
+cd "$ROOT_DIR"
+load_runtime_env
+compose_start "$@"
